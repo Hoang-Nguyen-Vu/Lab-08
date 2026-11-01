@@ -1,87 +1,45 @@
-//Hoàng Nguyên Vũ
-//202419020
+//Ngô Trường Phúc 202418964
+
 using System;
-using System.Collections.Generic;
+
 namespace DeviceManagement
 {
-    public interface IReadOnlySet<T> : IReadOnlyCollection<T>
-    {
-        bool Contains(T item);
-    }
-
-    public class ReadOnlySet<T> : IReadOnlySet<T>
-    {
-        private readonly HashSet<T> _set;
-
-        public ReadOnlySet(IEnumerable<T> collection)
-        {
-            _set = new HashSet<T>(collection);
-        }
-
-        public bool Contains(T item)
-        {
-            return _set.Contains(item);
-        }
-
-        public int Count
-        {
-            get { return _set.Count; }
-        }
-
-        public IEnumerator<T> GetEnumerator()
-        {
-            return _set.GetEnumerator();
-        }
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
-        {
-            return _set.GetEnumerator();
-        }
-    }
-
     public class AirConditionerRemote : TeachingDevice
     {
-        public IReadOnlySet<string> CompatibleRooms { get; private set; }
+        public string AssignedRoom { get; private set; }
+        public bool IsResponsive { get; private set; }
 
-        public AirConditionerRemote(string id, string name, string storageLocation, IEnumerable<string> compatibleRooms, DeviceStatus status = DeviceStatus.Available)
-            : base(id, name, storageLocation, status)
+        public AirConditionerRemote(string id, string name, string assignedRoom, bool initialResponsive = true)
+            : base(id, name)
         {
-            if (compatibleRooms == null)
+            if (string.IsNullOrEmpty(assignedRoom) || assignedRoom.Trim().Length == 0)
             {
-                throw new ArgumentNullException("compatibleRooms", "Tập danh sách phòng tương thích không được null rỗng.");
+                throw new ArgumentException("Phòng chứa thiết bị không được để trống");
             }
 
-            CompatibleRooms = new ReadOnlySet<string>(compatibleRooms);
+            AssignedRoom = assignedRoom;
+            IsResponsive = initialResponsive;
         }
 
-        public bool IsCompatibleWith(string roomId)
+        public void UpdateResponseState(bool isResponsive)
         {
-            if (string.IsNullOrEmpty(roomId))
+            if (!IsResponsive && !isResponsive)
             {
-                return false;
+                return;
             }
-            return CompatibleRooms.Contains(roomId);
-        }
 
-        public override bool IsReadyForUse()
-        {
-            return Status == DeviceStatus.Available;
-        }
+            bool oldState = IsResponsive;
+            IsResponsive = isResponsive;
 
-        public override double GetDefaultPriorityScore()
-        {
-            return CompatibleRooms.Count > 0 ? 100.0 : 0.0;
-        }
-
-        public override string ToString()
-        {
-            List<string> roomList = new List<string>();
-            foreach (string r in CompatibleRooms)
+            if (oldState && !isResponsive)
             {
-                roomList.Add(r);
+                RaiseAlert("Điều khiển điều hòa tại phòng " + AssignedRoom + " không phản hồi tín hiệu", AlertSeverity.Critical);
             }
-            string rooms = string.Join(", ", roomList.ToArray());
-            return base.ToString() + " | Phòng tương thích: [" + rooms + "] | Điểm ưu tiên: " + GetDefaultPriorityScore() + " | Sẵn sàng: " + IsReadyForUse();
+            else if (!oldState && isResponsive)
+            {
+                RaiseAlert("Điều khiển điều hòa tại phòng " + AssignedRoom + " phản hồi tín hiệu", AlertSeverity.Information);
+            }
         }
+
     }
 }

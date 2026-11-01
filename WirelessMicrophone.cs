@@ -1,42 +1,68 @@
-//Hoàng Nguyên Vũ
-//202419020
+//Ngô Trường Phúc 202418964
+
 using System;
+
 namespace DeviceManagement
 {
-    public class WirelessMicrophone : TeachingDevice
+    public class WirelessMicrophone : TeachingDevice, IBatteryOperated
     {
         public int BatteryLevel { get; private set; }
         public int SignalQuality { get; private set; }
 
-        public WirelessMicrophone(string id, string name, string storageLocation, int batteryLevel, int signalQuality, DeviceStatus status = DeviceStatus.Available)
-            : base(id, name, storageLocation, status)
+        public WirelessMicrophone(string id, string name, int initialBattery = 100, int initialSignalQuality = 100)
+            : base(id, name)
         {
-            if (batteryLevel < 0 || batteryLevel > 100)
+            if (initialBattery < 0 || initialBattery > 100)
             {
-                throw new ArgumentException("Mức pin micro từ 0 đến 100.");
+                throw new InvalidDeviceReadingException(id, initialBattery);
             }
-            if (signalQuality < 0 || signalQuality > 100)
+            if (initialSignalQuality < 0 || initialSignalQuality > 100)
             {
-                throw new ArgumentException("Chất lượng tín hiệu micro từ 0 đến 100.");
+                throw new InvalidDeviceReadingException(id, initialSignalQuality);
             }
 
-            BatteryLevel = batteryLevel;
-            SignalQuality = signalQuality;
+            BatteryLevel = initialBattery;
+            SignalQuality = initialSignalQuality;
         }
 
-        public override bool IsReadyForUse()
+        public void UpdateBatteryLevel(int newLevel)
         {
-            return Status == DeviceStatus.Available && BatteryLevel >= 30 && SignalQuality >= 40;
+            if (newLevel < 0 || newLevel > 100)
+            {
+                throw new InvalidDeviceReadingException(Id, newLevel);
+            }
+
+            int oldLevel = BatteryLevel;
+            BatteryLevel = newLevel;
+
+            if (newLevel == 0)
+            {
+                RaiseAlert("Pin micro: 0%", AlertSeverity.Critical);
+            }
+            else if (newLevel < 30)
+            {
+                RaiseAlert("Pin micro: " + newLevel + "% < 30%", AlertSeverity.Warning);
+            }
         }
 
-        public override double GetDefaultPriorityScore()
+        public void UpdateSignalQuality(int newQuality)
         {
-            return (BatteryLevel + SignalQuality) / 2.0;
-        }
+            if (newQuality < 0 || newQuality > 100)
+            {
+                throw new InvalidDeviceReadingException(Id, newQuality);
+            }
 
-        public override string ToString()
-        {
-            return base.ToString() + " | Pin: " + BatteryLevel + "% | Tín hiệu: " + SignalQuality + "% | Điểm ưu tiên: " + GetDefaultPriorityScore().ToString("F1") + " | Sẵn sàng: " + IsReadyForUse();
+            int oldQuality = SignalQuality;
+            SignalQuality = newQuality;
+
+            if (newQuality == 0)
+            {
+                RaiseAlert("Tín hiệu: 0%", AlertSeverity.Critical);
+            }
+            else if (newQuality < 40)
+            {
+                RaiseAlert("Tín hiệu: " + newQuality + "% < 40%", AlertSeverity.Warning);
+            }
         }
     }
 }
